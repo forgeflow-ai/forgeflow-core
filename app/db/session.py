@@ -3,11 +3,18 @@ from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
-engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
-
-SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+if settings.DATABASE_URL:
+    engine = create_engine(settings.DATABASE_URL, pool_pre_ping=True)
+    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
+else:
+    engine = None
+    SessionLocal = None
 
 def get_db():
+    if SessionLocal is None:
+        yield None
+        return
+    
     db = SessionLocal()
     try:
         yield db

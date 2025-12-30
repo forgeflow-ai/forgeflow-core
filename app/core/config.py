@@ -1,8 +1,10 @@
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class Settings(BaseSettings):
+    APP_NAME: str = "ForgeFlow Core API"
+    APP_VERSION: str = "0.0.1"
     ENV: str = "local"
-    DATABASE_URL: str
+    DATABASE_URL: str = ""
     JWT_SECRET: str = "change-me"
     CORS_ORIGINS: str = "*"
 
