@@ -48,9 +48,9 @@ def seed_admin_user():
         db.add(admin_user)
         db.flush()  # Get the user ID
         
-        # Generate API key (16 chars hex = 32 hex chars + prefix = ~35 chars, well under 72 byte limit)
-        # Using hex instead of token_urlsafe to ensure consistent byte length
-        random_bytes = secrets.token_bytes(16)  # 16 bytes = 32 hex chars
+        # Generate API key (20 hex chars = 10 bytes + prefix = 23 chars, well under 72 byte limit)
+        # Using hex to ensure consistent byte length
+        random_bytes = secrets.token_bytes(10)  # 10 bytes = 20 hex chars
         api_key_plain = f"ff_{random_bytes.hex()}"
         api_key_hash = hash_api_key(api_key_plain)
         
