@@ -13,6 +13,7 @@ from app.db.base import Base
 
 # IMPORTANT: modellere import ver ki metadata dolsun
 from app.models.user import User  # noqa: F401
+from app.models.api_key import ApiKey  # noqa: F401
 from app.models.workflow import Workflow  # noqa: F401
 from app.models.workflow_version import WorkflowVersion  # noqa: F401
 
