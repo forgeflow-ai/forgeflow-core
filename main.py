@@ -76,10 +76,18 @@ def seed_admin_user():
         
         # Also write to a file for easy access (HF Spaces Files tab)
         try:
+            # Write to /tmp (container filesystem)
             with open("/tmp/admin_api_key.txt", "w") as f:
                 f.write(f"Email: admin@forgeflow.local\n")
                 f.write(f"API Key: {api_key_plain}\n")
-            logger.info("API key also written to /tmp/admin_api_key.txt (check Files tab)")
+            logger.info("API key also written to /tmp/admin_api_key.txt")
+            
+            # Also write to project root (visible in HF Spaces Files tab)
+            key_file_path = project_root / "admin_api_key.txt"
+            with open(key_file_path, "w") as f:
+                f.write(f"Email: admin@forgeflow.local\n")
+                f.write(f"API Key: {api_key_plain}\n")
+            logger.info(f"API key also written to {key_file_path} (check Files tab in HF Spaces)")
         except Exception as e:
             logger.warning(f"Could not write API key to file: {e}")
         
