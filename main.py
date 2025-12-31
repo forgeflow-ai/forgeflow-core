@@ -53,18 +53,27 @@ def seed_admin_user():
         # Using hex to ensure consistent byte length
         random_bytes = secrets.token_bytes(8)  # 8 bytes = 16 hex chars
         api_key_plain = f"ff_{random_bytes.hex()}"
-        api_key_hash = hash_api_key(api_key_plain)
         
-        # Create API key
-        api_key = ApiKey(
-            user_id=admin_user.id,
-            key_hash=api_key_hash,
-            name="Admin API Key (Seeded)"
-        )
-        db.add(api_key)
-        db.commit()
+        # Try to hash the API key
+        try:
+            api_key_hash = hash_api_key(api_key_plain)
+            
+            # Create API key
+            api_key = ApiKey(
+                user_id=admin_user.id,
+                key_hash=api_key_hash,
+                name="Admin API Key (Seeded)"
+            )
+            db.add(api_key)
+            db.commit()
+            logger.info("API key created and saved to database")
+        except Exception as hash_error:
+            logger.error(f"Failed to hash API key: {hash_error}")
+            logger.warning("API key will be shown but not saved to database. Fix bcrypt issue to enable authentication.")
+            db.rollback()
+            # Continue to show the key even if hash fails
         
-        # Log the plaintext key
+        # Log and save the plaintext key (always, even if hash failed)
         logger.info("=" * 80)
         logger.info("ADMIN USER SEEDED")
         logger.info("=" * 80)
@@ -75,21 +84,21 @@ def seed_admin_user():
         logger.info("=" * 80)
         
         # Also write to a file for easy access (HF Spaces Files tab)
-        try:
-            # Write to /tmp (container filesystem)
-            with open("/tmp/admin_api_key.txt", "w") as f:
-                f.write(f"Email: admin@forgeflow.local\n")
-                f.write(f"API Key: {api_key_plain}\n")
-            logger.info("API key also written to /tmp/admin_api_key.txt")
-            
-            # Also write to project root (visible in HF Spaces Files tab)
-            key_file_path = project_root / "admin_api_key.txt"
-            with open(key_file_path, "w") as f:
-                f.write(f"Email: admin@forgeflow.local\n")
-                f.write(f"API Key: {api_key_plain}\n")
-            logger.info(f"API key also written to {key_file_path} (check Files tab in HF Spaces)")
-        except Exception as e:
-            logger.warning(f"Could not write API key to file: {e}")
+        # Try multiple locations
+        file_paths = [
+            "/tmp/admin_api_key.txt",
+            str(project_root / "admin_api_key.txt"),
+            "/app/admin_api_key.txt",
+        ]
+        
+        for file_path in file_paths:
+            try:
+                with open(file_path, "w") as f:
+                    f.write(f"Email: admin@forgeflow.local\n")
+                    f.write(f"API Key: {api_key_plain}\n")
+                logger.info(f"API key written to {file_path}")
+            except Exception as e:
+                logger.warning(f"Could not write API key to {file_path}: {e}")
         
     except Exception as e:
         logger.error(f"Error seeding admin user: {e}")
