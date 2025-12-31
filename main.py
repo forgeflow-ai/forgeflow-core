@@ -1,6 +1,7 @@
 import sys
 import secrets
 import logging
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 # Add the project root to Python path
@@ -47,8 +48,8 @@ def seed_admin_user():
         db.add(admin_user)
         db.flush()  # Get the user ID
         
-        # Generate API key
-        api_key_plain = f"ff_{secrets.token_urlsafe(32)}"
+        # Generate API key (24 chars random + prefix = ~30 chars, well under 72 byte limit)
+        api_key_plain = f"ff_{secrets.token_urlsafe(24)}"
         api_key_hash = hash_api_key(api_key_plain)
         
         # Create API key
@@ -77,6 +78,15 @@ def seed_admin_user():
         db.close()
 
 
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Lifespan context manager for startup and shutdown events."""
+    # Startup
+    seed_admin_user()
+    yield
+    # Shutdown (if needed in future)
+
+
 def create_app() -> FastAPI:
     app = FastAPI(
         title=settings.APP_NAME,
@@ -84,6 +94,7 @@ def create_app() -> FastAPI:
         docs_url="/",
         redoc_url=None,
         openapi_url="/openapi.json",
+        lifespan=lifespan,
     )
 
     origins = ["*"] if settings.CORS_ORIGINS == "*" else [o.strip() for o in settings.CORS_ORIGINS.split(",")]
@@ -100,11 +111,6 @@ def create_app() -> FastAPI:
     app.include_router(health_router)
     app.include_router(auth_router)
     app.include_router(flows_router)
-    
-    # Seed admin user on startup
-    @app.on_event("startup")
-    async def startup_event():
-        seed_admin_user()
 
     return app
 
