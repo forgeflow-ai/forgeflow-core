@@ -16,6 +16,9 @@ from app.models.user import User  # noqa: F401
 from app.models.api_key import ApiKey  # noqa: F401
 from app.models.workflow import Workflow  # noqa: F401
 from app.models.workflow_version import WorkflowVersion  # noqa: F401
+from app.models.project import Project  # noqa: F401
+from app.models.flow import Flow  # noqa: F401
+from app.models.flow_run import FlowRun  # noqa: F401
 
 config = context.config
 fileConfig(config.config_file_name)
