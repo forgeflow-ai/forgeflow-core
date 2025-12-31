@@ -8,8 +8,9 @@ sys.path.insert(0, str(project_root))
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-# Import settings from app package
+# Import settings and routers from app package
 from app.core.config import settings
+from app.api.health import router as health_router
 
 
 def create_app() -> FastAPI:
@@ -30,6 +31,9 @@ def create_app() -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+
+    # Include routers
+    app.include_router(health_router)
 
     return app
 
