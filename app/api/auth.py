@@ -11,7 +11,7 @@ from app.models.api_key import ApiKey
 from app.models.user import User
 
 router = APIRouter(tags=["auth"])
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 
 class UserResponse(BaseModel):
@@ -31,13 +31,19 @@ class UserResponse(BaseModel):
 
 
 def get_current_user(
-    credentials: HTTPAuthorizationCredentials = Security(security),
+    credentials: Optional[HTTPAuthorizationCredentials] = Security(security),
     db: Session = Depends(get_db)
 ) -> User:
     """
     Authenticate user via API key from Authorization header.
     Raises 401 if authentication fails.
     """
+    if credentials is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authorization header missing"
+        )
+    
     if db is None:
         raise HTTPException(
             status_code=503,
