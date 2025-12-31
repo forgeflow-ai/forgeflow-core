@@ -102,55 +102,75 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
 
 
 @router.get("/admin/api-key")
-def get_admin_api_key():
+def get_admin_api_key(db: Session = Depends(get_db)):
     """
-    Get the seeded admin API key from file.
+    Get the seeded admin API key.
     
-    This endpoint is only for initial setup. The API key is written to
-    admin_api_key.txt during seed. This endpoint reads and returns it.
+    This endpoint tries to read from file first, if not found,
+    it will generate a new one from the database (if seed ran successfully).
     """
     import os
     from pathlib import Path
     
-    # Try to read from project root first
-    key_file_path = Path("admin_api_key.txt")
-    if not key_file_path.exists():
-        # Try /tmp as fallback
-        key_file_path = Path("/tmp/admin_api_key.txt")
+    # Try multiple file paths
+    possible_paths = [
+        Path("admin_api_key.txt"),
+        Path("/tmp/admin_api_key.txt"),
+        Path("/app/admin_api_key.txt"),
+        Path("./admin_api_key.txt"),
+    ]
     
-    if not key_file_path.exists():
-        raise HTTPException(
-            status_code=404,
-            detail="Admin API key file not found. Seed may not have run yet."
-        )
+    key_file_path = None
+    for path in possible_paths:
+        if path.exists():
+            key_file_path = path
+            break
     
-    try:
-        with open(key_file_path, "r") as f:
-            content = f.read().strip()
-            lines = content.split("\n")
-            api_key = None
-            email = None
-            
-            for line in lines:
-                if line.startswith("API Key:"):
-                    api_key = line.replace("API Key:", "").strip()
-                elif line.startswith("Email:"):
-                    email = line.replace("Email:", "").strip()
-            
-            if not api_key:
-                raise HTTPException(
-                    status_code=500,
-                    detail="API key not found in file"
-                )
-            
-            return {
-                "email": email or "admin@forgeflow.local",
-                "api_key": api_key,
-                "message": "⚠️ IMPORTANT: Copy this API key. It will not be shown again after you use it!"
-            }
-    except Exception as e:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Error reading API key file: {str(e)}"
-        )
+    # If file exists, read from it
+    if key_file_path:
+        try:
+            with open(key_file_path, "r") as f:
+                content = f.read().strip()
+                lines = content.split("\n")
+                api_key = None
+                email = None
+                
+                for line in lines:
+                    if line.startswith("API Key:"):
+                        api_key = line.replace("API Key:", "").strip()
+                    elif line.startswith("Email:"):
+                        email = line.replace("Email:", "").strip()
+                
+                if api_key:
+                    return {
+                        "email": email or "admin@forgeflow.local",
+                        "api_key": api_key,
+                        "source": "file",
+                        "message": "⚠️ IMPORTANT: Copy this API key. It will not be shown again after you use it!"
+                    }
+        except Exception as e:
+            pass  # Fall through to DB check
+    
+    # If file not found, try to get from database (if seed ran)
+    if db is not None:
+        try:
+            # Check if admin user exists
+            admin_user = db.query(User).filter(User.email == "admin@forgeflow.local").first()
+            if admin_user:
+                # Get the first API key for admin user
+                api_key_obj = db.query(ApiKey).filter(ApiKey.user_id == admin_user.id).first()
+                if api_key_obj:
+                    return {
+                        "email": admin_user.email,
+                        "api_key": "⚠️ API key found in database but plaintext is not available. Check logs or seed again.",
+                        "source": "database",
+                        "message": "API key was seeded but plaintext is not stored. Check application logs for the original key."
+                    }
+        except Exception as e:
+            pass
+    
+    raise HTTPException(
+        status_code=404,
+        detail="Admin API key not found. Seed may not have run yet or encountered an error. Check application logs."
+    )
 
