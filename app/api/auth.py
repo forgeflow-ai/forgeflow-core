@@ -100,3 +100,57 @@ def get_me(current_user: User = Depends(get_current_user)) -> UserResponse:
         created_at=current_user.created_at.isoformat() + "Z"
     )
 
+
+@router.get("/admin/api-key")
+def get_admin_api_key():
+    """
+    Get the seeded admin API key from file.
+    
+    This endpoint is only for initial setup. The API key is written to
+    admin_api_key.txt during seed. This endpoint reads and returns it.
+    """
+    import os
+    from pathlib import Path
+    
+    # Try to read from project root first
+    key_file_path = Path("admin_api_key.txt")
+    if not key_file_path.exists():
+        # Try /tmp as fallback
+        key_file_path = Path("/tmp/admin_api_key.txt")
+    
+    if not key_file_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail="Admin API key file not found. Seed may not have run yet."
+        )
+    
+    try:
+        with open(key_file_path, "r") as f:
+            content = f.read().strip()
+            lines = content.split("\n")
+            api_key = None
+            email = None
+            
+            for line in lines:
+                if line.startswith("API Key:"):
+                    api_key = line.replace("API Key:", "").strip()
+                elif line.startswith("Email:"):
+                    email = line.replace("Email:", "").strip()
+            
+            if not api_key:
+                raise HTTPException(
+                    status_code=500,
+                    detail="API key not found in file"
+                )
+            
+            return {
+                "email": email or "admin@forgeflow.local",
+                "api_key": api_key,
+                "message": "⚠️ IMPORTANT: Copy this API key. It will not be shown again after you use it!"
+            }
+    except Exception as e:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Error reading API key file: {str(e)}"
+        )
+
