@@ -74,6 +74,15 @@ def seed_admin_user():
         logger.info("⚠️  IMPORTANT: Copy this API key from the logs. It will not be shown again!")
         logger.info("=" * 80)
         
+        # Also write to a file for easy access (HF Spaces Files tab)
+        try:
+            with open("/tmp/admin_api_key.txt", "w") as f:
+                f.write(f"Email: admin@forgeflow.local\n")
+                f.write(f"API Key: {api_key_plain}\n")
+            logger.info("API key also written to /tmp/admin_api_key.txt (check Files tab)")
+        except Exception as e:
+            logger.warning(f"Could not write API key to file: {e}")
+        
     except Exception as e:
         logger.error(f"Error seeding admin user: {e}")
         db.rollback()
